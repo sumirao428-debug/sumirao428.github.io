@@ -1,3 +1,197 @@
+<!-- <!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>交換禮物｜抽籤</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Microsoft JhengHei', sans-serif;
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow-x:hidden;
+      background: linear-gradient(to bottom, #001f3f, #000);
+      color:#fff;
+    }
+    .app {
+      width: 100%;
+      max-width: 900px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 16px;
+      box-shadow: 0 0 40px rgba(255,215,0,0.3);
+      padding: 16px;
+      margin: 12px;
+    }
+    h1 { margin: 0 0 16px; color: #fff; font-size: 24px; text-align:center; }
+    .panel { background: rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; }
+    .btn {
+      background: #ffd700; color: #000; font-weight: bold;
+      border: none; border-radius: 8px; padding: 10px 14px;
+      cursor: pointer; margin: 4px; font-size: 16px;
+    }
+    .btn:disabled { background: #555; color: #aaa; cursor: not-allowed; }
+    .display-box {
+      margin: 16px auto;
+      padding: 20px;
+      border: 2px solid #ffd700;
+      border-radius: 8px;
+      text-align:center;
+      font-size: 20px;
+      font-weight:bold;
+      color:#fff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      color:#fff;
+    }
+    th, td {
+      border: 1px solid #ffd700;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background: rgba(255,215,0,0.2);
+      color: #fff;
+    }
+    tbody tr:nth-child(even) { background: rgba(255,255,255,0.1); }
+    tbody tr:nth-child(odd) { background: rgba(0,0,0,0.2); }
+    .snowflake {
+      position: fixed; top: -10px; color: white; font-size: 18px;
+      animation: fall linear infinite; opacity: 0.9; pointer-events:none;
+    }
+    @keyframes fall { to { transform: translateY(110vh); } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>交換禮物｜抽籤</h1>
+    <div class="panel">
+      <div class="display-box" id="gachaBox">請按「開始抽籤」</div>
+      <div style="text-align:center;">
+        <button id="startBtn" class="btn">開始抽籤</button>
+        <button id="drawBtn" class="btn" disabled>抽籤</button>
+        <button id="resetBtn" class="btn" style="background:#ff6b6b;">重置</button>
+      </div>
+      <div style="margin-top:12px;">
+        <span style="font-weight:bold;">完整配對清單：</span>
+        <table id="pairTable">
+          <thead>
+            <tr>
+              <th>抽籤結果</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const participants = ["Alice","Bob","Charlie","David","Eva"];
+    const startDrawer = "Alice";
+    const fixedTarget = "David"; // Alice 固定抽到 David
+
+    let currentDrawer = null;
+    let remaining = [];
+    let assigned = [];
+    let finished = false;
+    let firstFixedDone = false;
+
+    const el = {
+      startBtn: document.getElementById("startBtn"),
+      drawBtn: document.getElementById("drawBtn"),
+      resetBtn: document.getElementById("resetBtn"),
+      gachaBox: document.getElementById("gachaBox"),
+      pairTableBody: document.querySelector("#pairTable tbody"),
+    };
+
+    function render() {
+      el.drawBtn.disabled = finished || !currentDrawer;
+      let rows = assigned.map(p => `<tr><td>${p.from} 抽到 ${p.to} 的禮物</td></tr>`).join("");
+      if (finished) {
+        rows += `<tr><td style="color:#ffd700; font-weight:bold;">🎄 祝各位聖誕節快樂 🎁</td></tr>`;
+      }
+      el.pairTableBody.innerHTML = rows;
+      if (finished) el.gachaBox.textContent = "抽籤完成 🎉";
+    }
+
+    function createSnowflake() {
+      const s = document.createElement("div");
+      s.className = "snowflake";
+      s.textContent = "❄";
+      s.style.left = Math.random() * window.innerWidth + "px";
+      s.style.animationDuration = (Math.random() * 3 + 2) + "s";
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 6000);
+    }
+    setInterval(createSnowflake, 300);
+
+    el.startBtn.onclick = () => {
+      currentDrawer = startDrawer;
+      remaining = participants.filter(p => p !== startDrawer);
+      assigned = [];
+      finished = false;
+      firstFixedDone = false;
+      el.gachaBox.textContent = `輪到：${currentDrawer}`;
+      el.drawBtn.disabled = false;
+
+      // 🔒 按下後反灰不可再點
+      el.startBtn.disabled = true;
+
+      render();
+    };
+
+    el.drawBtn.onclick = () => {
+      if (finished) return;
+
+      if (!firstFixedDone && currentDrawer === startDrawer) {
+        assigned.push({ from: startDrawer, to: fixedTarget });
+        remaining = remaining.filter(n => n !== fixedTarget);
+        currentDrawer = fixedTarget;
+        firstFixedDone = true;
+        el.gachaBox.textContent = `輪到：${currentDrawer}`;
+        render();
+        return;
+      }
+
+      if (remaining.length === 0) {
+        assigned.push({ from: currentDrawer, to: startDrawer });
+        finished = true;
+        render();
+        return;
+      }
+
+      const candidates = remaining.filter(n => n !== currentDrawer);
+      const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+      assigned.push({ from: currentDrawer, to: chosen });
+      remaining = remaining.filter(n => n !== chosen);
+      currentDrawer = chosen;
+      el.gachaBox.textContent = `輪到：${currentDrawer}`;
+      render();
+    };
+
+    el.resetBtn.onclick = () => {
+      currentDrawer = null;
+      remaining = [];
+      assigned = [];
+      finished = false;
+      firstFixedDone = false;
+      el.gachaBox.textContent = "請按「開始抽籤」";
+      el.drawBtn.disabled = true;
+
+      // 🔓 重置時恢復可點
+      el.startBtn.disabled = false;
+
+      render();
+    };
+  </script>
+</body>
+</html> -->
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -92,15 +286,13 @@
   </div>
 
   <script>
-    const participants = ["秦敏","心如","雪兒","易霖","瑀恬","桂香",];
-    const startDrawer = "秦敏";
-    const fixedTarget = "David"; // Alice 固定抽到 David
+    const participants = ["秦敏","雪兒","心如","易霖","柏豪","云菡","桂香","俊賢","文馨","琬婷","斯愉","思妤","俞君","倍瑜","瑀恬","乃瑛"];
+    const startDrawer = "秦敏";   // 第一人固定抽籤者
 
     let currentDrawer = null;
     let remaining = [];
     let assigned = [];
     let finished = false;
-    let firstFixedDone = false;
 
     const el = {
       startBtn: document.getElementById("startBtn"),
@@ -114,7 +306,7 @@
       el.drawBtn.disabled = finished || !currentDrawer;
       let rows = assigned.map(p => `<tr><td>${p.from} 抽到 ${p.to} 的禮物</td></tr>`).join("");
       if (finished) {
-        rows += `<tr><td>🎄 祝各位聖誕節快樂 🎁</td></tr>`;
+        rows += `<tr><td style="color:#ffd700; font-weight:bold;">🎄 祝各位聖誕節快樂 🎁</td></tr>`;
       }
       el.pairTableBody.innerHTML = rows;
       if (finished) el.gachaBox.textContent = "抽籤完成 🎉";
@@ -131,30 +323,26 @@
     }
     setInterval(createSnowflake, 300);
 
+    // 開始抽籤
     el.startBtn.onclick = () => {
       currentDrawer = startDrawer;
       remaining = participants.filter(p => p !== startDrawer);
       assigned = [];
       finished = false;
-      firstFixedDone = false;
       el.gachaBox.textContent = `輪到：${currentDrawer}`;
       el.drawBtn.disabled = false;
+
+      // 🔒 按下後反灰不可再點
+      el.startBtn.disabled = true;
+
       render();
     };
 
+    // 抽籤
     el.drawBtn.onclick = () => {
       if (finished) return;
 
-      if (!firstFixedDone && currentDrawer === startDrawer) {
-        assigned.push({ from: startDrawer, to: fixedTarget });
-        remaining = remaining.filter(n => n !== fixedTarget);
-        currentDrawer = fixedTarget;
-        firstFixedDone = true;
-        el.gachaBox.textContent = `輪到：${currentDrawer}`;
-        render();
-        return;
-      }
-
+      // 最後一人抽回 Alice
       if (remaining.length === 0) {
         assigned.push({ from: currentDrawer, to: startDrawer });
         finished = true;
@@ -162,6 +350,7 @@
         return;
       }
 
+      // 隨機抽
       const candidates = remaining.filter(n => n !== currentDrawer);
       const chosen = candidates[Math.floor(Math.random() * candidates.length)];
       assigned.push({ from: currentDrawer, to: chosen });
@@ -171,14 +360,18 @@
       render();
     };
 
+    // 重置
     el.resetBtn.onclick = () => {
       currentDrawer = null;
       remaining = [];
       assigned = [];
       finished = false;
-      firstFixedDone = false;
       el.gachaBox.textContent = "請按「開始抽籤」";
       el.drawBtn.disabled = true;
+
+      // 🔓 重置時恢復可點
+      el.startBtn.disabled = false;
+
       render();
     };
   </script>
