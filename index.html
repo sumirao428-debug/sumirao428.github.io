@@ -92,9 +92,9 @@
   </div>
 
   <script>
-    const participants = ["Alice","Bob","Charlie","David","Eva"];
-    const startDrawer = "Alice";
-    const fixedTarget = "David"; // Alice 固定抽到 David
+    const participants = ["秦敏","雪兒","朝翔","心如","易霖","柏豪","云菡","桂香","俊賢","文馨","琬婷","斯愉","思妤","倍瑜","瑀恬","乃瑛"];
+    const startDrawer = "秦敏";
+    const fixedTarget = "乃瑛"; // 秦敏 固定抽到 乃瑛
 
     let currentDrawer = null;
     let remaining = [];
@@ -265,7 +265,14 @@
   <div class="app">
     <h1>交換禮物｜抽籤</h1>
     <div class="panel">
-      <div class="display-box" id="gachaBox">請按「開始抽籤」</div>
+      <div class="display-box" id="gachaBox">請輸入名單並按「開始抽籤」</div>
+      <div style="text-align:center; margin-bottom:12px;">
+        <p style="font-weight:bold; color:#ffd700;">
+          已確定秦敏抽到乃瑛，由乃瑛開始
+        </p>
+        <textarea id="nameInput" rows="3" style="width:90%;" 
+          placeholder="請輸入其他抽獎人員，用逗號分隔"></textarea>
+      </div>
       <div style="text-align:center;">
         <button id="startBtn" class="btn">開始抽籤</button>
         <button id="drawBtn" class="btn" disabled>抽籤</button>
@@ -275,9 +282,7 @@
         <span style="font-weight:bold;">完整配對清單：</span>
         <table id="pairTable">
           <thead>
-            <tr>
-              <th>抽籤結果</th>
-            </tr>
+            <tr><th>抽籤結果</th></tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -286,13 +291,15 @@
   </div>
 
   <script>
-    const participants = ["秦敏","雪兒","心如","易霖","柏豪","云菡","桂香","俊賢","文馨","琬婷","斯愉","思妤","俞君","倍瑜","瑀恬","乃瑛"];
-    const startDrawer = "秦敏";   // 第一人固定抽籤者
+    const startDrawer = "秦敏";
+    const fixedTarget = "乃瑛"; // 秦敏 固定抽到 乃瑛
 
+    let participants = [];
     let currentDrawer = null;
     let remaining = [];
     let assigned = [];
     let finished = false;
+    let firstFixedDone = false;
 
     const el = {
       startBtn: document.getElementById("startBtn"),
@@ -300,6 +307,7 @@
       resetBtn: document.getElementById("resetBtn"),
       gachaBox: document.getElementById("gachaBox"),
       pairTableBody: document.querySelector("#pairTable tbody"),
+      nameInput: document.getElementById("nameInput")
     };
 
     function render() {
@@ -323,26 +331,38 @@
     }
     setInterval(createSnowflake, 300);
 
-    // 開始抽籤
     el.startBtn.onclick = () => {
+      // 使用者輸入名單
+      const inputNames = el.nameInput.value.split(",").map(n => n.trim()).filter(n => n);
+
+      // 固定人員 + 使用者輸入名單
+      participants = [startDrawer, fixedTarget, ...inputNames];
+
       currentDrawer = startDrawer;
       remaining = participants.filter(p => p !== startDrawer);
       assigned = [];
       finished = false;
+      firstFixedDone = false;
       el.gachaBox.textContent = `輪到：${currentDrawer}`;
       el.drawBtn.disabled = false;
 
-      // 🔒 按下後反灰不可再點
       el.startBtn.disabled = true;
-
       render();
     };
 
-    // 抽籤
     el.drawBtn.onclick = () => {
       if (finished) return;
 
-      // 最後一人抽回 Alice
+      if (!firstFixedDone && currentDrawer === startDrawer) {
+        assigned.push({ from: startDrawer, to: fixedTarget });
+        remaining = remaining.filter(n => n !== fixedTarget);
+        currentDrawer = fixedTarget;
+        firstFixedDone = true;
+        el.gachaBox.textContent = `輪到：${currentDrawer}`;
+        render();
+        return;
+      }
+
       if (remaining.length === 0) {
         assigned.push({ from: currentDrawer, to: startDrawer });
         finished = true;
@@ -350,7 +370,6 @@
         return;
       }
 
-      // 隨機抽
       const candidates = remaining.filter(n => n !== currentDrawer);
       const chosen = candidates[Math.floor(Math.random() * candidates.length)];
       assigned.push({ from: currentDrawer, to: chosen });
@@ -360,18 +379,15 @@
       render();
     };
 
-    // 重置
     el.resetBtn.onclick = () => {
       currentDrawer = null;
       remaining = [];
       assigned = [];
       finished = false;
-      el.gachaBox.textContent = "請按「開始抽籤」";
+      firstFixedDone = false;
+      el.gachaBox.textContent = "請輸入名單並按「開始抽籤」";
       el.drawBtn.disabled = true;
-
-      // 🔓 重置時恢復可點
       el.startBtn.disabled = false;
-
       render();
     };
   </script>
